@@ -116,11 +116,11 @@ export default function Dashboard({ stats }) {
                 <div className="widget-title">
                     <h3>Próximos Envios 📬</h3>
                 </div>
-                <div className="widget-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="widget-list">
                     {toShipList.map(sale => (
-                        <div key={sale.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{sale.crm_customers?.name}</div>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={sale.id} className="list-item">
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{sale.crm_customers?.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <span className="badge badge-pending">PENDENTE</span>
                                 <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '8px' }}>Gerar Etiqueta</button>
                             </div>
