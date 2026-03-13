@@ -6,39 +6,78 @@ export default function Dashboard({ stats }) {
     const [pendingSales, setPendingSales] = useState([])
     const [toShipList, setToShipList] = useState([])
     const [lowStockProds, setLowStockProds] = useState([])
+    const [editingSaleId, setEditingSaleId] = useState(null)
+    const [editData, setEditData] = useState({})
+    const [saving, setSaving] = useState(false)
+
+    const loadWidgets = async () => {
+        // Vendas Pendentes de Cobrança (Fiado ou Parcelado)
+        const { data: pendings } = await supabase
+            .from('crm_sales')
+            .select('id, total_amount, payment_status, crm_customers(name)')
+            .in('payment_status', ['Fiado', 'Parcelado'])
+            .order('created_at', { ascending: false })
+            .limit(5)
+
+        // Vendas Pendentes de Entrega
+        const { data: toShip } = await supabase
+            .from('crm_sales')
+            .select('id, total_amount, delivery_status, tracking_code, crm_customers(name)')
+            .eq('delivery_status', 'Pendente')
+            .order('created_at', { ascending: false })
+            .limit(5)
+
+        // Produtos com estoque baixo (< 10)
+        const { data: lowStock } = await supabase
+            .from('crm_products')
+            .select('id, name, stock')
+            .lt('stock', 10)
+            .order('stock', { ascending: true })
+            .limit(5)
+
+        setPendingSales(pendings || [])
+        setToShipList(toShip || [])
+        setLowStockProds(lowStock || [])
+    }
 
     useEffect(() => {
-        const loadWidgets = async () => {
-            // Vendas Pendentes de Cobrança (Fiado ou Parcelado)
-            const { data: pendings } = await supabase
-                .from('crm_sales')
-                .select('id, total_amount, payment_status, crm_customers(name)')
-                .in('payment_status', ['Fiado', 'Parcelado'])
-                .order('created_at', { ascending: false })
-                .limit(5)
-
-            // Vendas Pendentes de Entrega
-            const { data: toShip } = await supabase
-                .from('crm_sales')
-                .select('id, total_amount, delivery_status, crm_customers(name)')
-                .eq('delivery_status', 'Pendente')
-                .order('created_at', { ascending: false })
-                .limit(5)
-
-            // Produtos com estoque baixo (< 10)
-            const { data: lowStock } = await supabase
-                .from('crm_products')
-                .select('id, name, stock')
-                .lt('stock', 10)
-                .order('stock', { ascending: true })
-                .limit(5)
-
-            setPendingSales(pendings || [])
-            setToShipList(toShip || [])
-            setLowStockProds(lowStock || [])
-        }
         loadWidgets()
     }, [])
+
+    const startEdit = (sale) => {
+        setEditingSaleId(sale.id)
+        setEditData({
+            delivery_status: sale.delivery_status || 'Pendente',
+            tracking_code: sale.tracking_code || ''
+        })
+    }
+
+    const cancelEdit = () => {
+        setEditingSaleId(null)
+        setEditData({})
+    }
+
+    const saveEdit = async (saleId) => {
+        setSaving(true)
+        try {
+            const { error } = await supabase
+                .from('crm_sales')
+                .update({
+                    delivery_status: editData.delivery_status,
+                    tracking_code: editData.tracking_code || null
+                })
+                .eq('id', saleId)
+            
+            if (error) throw error
+            setEditingSaleId(null)
+            await loadWidgets()
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao atualizar envio.')
+        } finally {
+            setSaving(false)
+        }
+    }
 
     const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
@@ -119,11 +158,43 @@ export default function Dashboard({ stats }) {
                 <div className="widget-list" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1rem' }}>
                     {toShipList.map(sale => (
                         <div key={sale.id} className="list-item">
-                            <div style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sale.crm_customers?.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                                <span className="badge badge-pending">PENDENTE</span>
-                                <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>✎ Editar</button>
-                            </div>
+                            {editingSaleId === sale.id ? (
+                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{sale.crm_customers?.name}</div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <select
+                                            style={{ padding: '6px', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'transparent', color: 'var(--text-main)' }}
+                                            value={editData.delivery_status}
+                                            onChange={e => setEditData({ ...editData, delivery_status: e.target.value })}
+                                        >
+                                            <option style={{ background: '#1a1b26' }}>Pendente</option>
+                                            <option style={{ background: '#1a1b26' }}>Enviado</option>
+                                            <option style={{ background: '#1a1b26' }}>Entregue</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            placeholder="Cód rastreio"
+                                            style={{ padding: '6px', fontSize: '0.8rem', width: '130px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'transparent', color: 'var(--text-main)' }}
+                                            value={editData.tracking_code}
+                                            onChange={e => setEditData({ ...editData, tracking_code: e.target.value })}
+                                        />
+                                        <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px' }} onClick={() => saveEdit(sale.id)} disabled={saving}>
+                                            {saving ? '...' : 'Salvar'}
+                                        </button>
+                                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.75rem', borderRadius: '8px' }} onClick={cancelEdit}>
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sale.crm_customers?.name}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                                        <span className="badge badge-pending">PENDENTE</span>
+                                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '8px', border: '1px solid var(--glass-border)' }} onClick={() => startEdit(sale)}>✎ Editar</button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ))}
                     {toShipList.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Nenhuma entrega pendente.</p>}
