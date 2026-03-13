@@ -95,8 +95,9 @@ export default function CustomerList({ onEdit }) {
                                     </td>
                                     <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
                                         {customer.zip_code ? `[${customer.zip_code}] ` : ''}
-                                        {customer.address ? `${customer.address}${customer.address_number ? `, ${customer.address_number}` : ''} - ` : ''}
-                                        {customer.city ? `${customer.city}${customer.state ? `/${customer.state.toUpperCase()}` : ''}` : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                                        {customer.address ? `${customer.address}${customer.address_number ? `, ${customer.address_number}` : ''}` : ''}
+                                        {customer.bairro ? ` - ${customer.bairro}` : ''}
+                                        {customer.city ? ` - ${customer.city}${customer.state ? `/${customer.state.toUpperCase()}` : ''}` : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                         <button

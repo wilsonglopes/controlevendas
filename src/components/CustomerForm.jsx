@@ -10,6 +10,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         email: customer?.email || '',
         address: customer?.address || '',
         address_number: customer?.address_number || '',
+        bairro: customer?.bairro || '',
         zip_code: customer?.zip_code || '',
         city: customer?.city || '',
         state: customer?.state || '',
@@ -25,6 +26,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
                 email: customer.email || '',
                 address: customer.address || '',
                 address_number: customer.address_number || '',
+                bairro: customer.bairro || '',
                 zip_code: customer.zip_code || '',
                 city: customer.city || '',
                 state: customer.state || '',
@@ -33,6 +35,31 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
             })
         }
     }, [customer])
+
+    const handleCEPBlur = async () => {
+        const cep = formData.zip_code.replace(/\D/g, '')
+        if (cep.length === 8) {
+            try {
+                setLoading(true)
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                const data = await response.json()
+                
+                if (!data.erro) {
+                    setFormData(prev => ({
+                        ...prev,
+                        address: data.logradouro || prev.address,
+                        bairro: data.bairro || prev.bairro,
+                        city: data.localidade || prev.city,
+                        state: data.uf || prev.state
+                    }))
+                }
+            } catch (error) {
+                console.error('Erro ao buscar CEP:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -43,6 +70,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
             email: formData.email || null,
             address: formData.address || null,
             address_number: formData.address_number || null,
+            bairro: formData.bairro || null,
             zip_code: formData.zip_code || null,
             city: formData.city || null,
             state: formData.state || null,
@@ -114,6 +142,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
                             type="text"
                             value={formData.zip_code}
                             onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
+                            onBlur={handleCEPBlur}
                             placeholder="00000-000"
                         />
                     </div>
@@ -137,16 +166,17 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1rem' }}>
-                    <div className="input-group">
-                        <label>Endereço / Rua</label>
-                        <input
-                            type="text"
-                            value={formData.address}
-                            onChange={e => setFormData({ ...formData, address: e.target.value })}
-                            placeholder="Rua, complemento"
-                        />
-                    </div>
+                <div className="input-group">
+                    <label>Endereço / Rua</label>
+                    <input
+                        type="text"
+                        value={formData.address}
+                        onChange={e => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="Rua, Travessa, etc."
+                    />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
                     <div className="input-group">
                         <label>Número</label>
                         <input
@@ -154,6 +184,15 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
                             value={formData.address_number}
                             onChange={e => setFormData({ ...formData, address_number: e.target.value })}
                             placeholder="123"
+                        />
+                    </div>
+                    <div className="input-group">
+                        <label>Bairro</label>
+                        <input
+                            type="text"
+                            value={formData.bairro}
+                            onChange={e => setFormData({ ...formData, bairro: e.target.value })}
+                            placeholder="Bairro"
                         />
                     </div>
                 </div>
