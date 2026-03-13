@@ -116,13 +116,13 @@ export default function Dashboard({ stats }) {
                 <div className="widget-title">
                     <h3>Próximos Envios 📬</h3>
                 </div>
-                <div className="widget-list">
+                <div className="widget-list" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1rem' }}>
                     {toShipList.map(sale => (
                         <div key={sale.id} className="list-item">
-                            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{sale.crm_customers?.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sale.crm_customers?.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                                 <span className="badge badge-pending">PENDENTE</span>
-                                <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '8px' }}>Gerar Etiqueta</button>
+                                <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>✎ Editar</button>
                             </div>
                         </div>
                     ))}
@@ -132,3 +132,4 @@ export default function Dashboard({ stats }) {
         </div>
     )
 }
+``
