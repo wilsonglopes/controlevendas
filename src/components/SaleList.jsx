@@ -178,15 +178,46 @@ function OrderDetail({ sale, fmt }) {
                             </div>
                         ))}
 
-                        {/* Total */}
+                        {/* Total / Desconto */}
                         <div style={{
-                            display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-                            gap: '0.5rem', paddingTop: '0.6rem', paddingRight: '0.5rem',
-                            borderTop: '1px solid var(--glass-border)', marginTop: '0.15rem',
-                            fontSize: '1rem', fontWeight: 800, fontFamily: 'Outfit',
+                            borderTop: '1px solid var(--glass-border)',
+                            marginTop: '0.15rem', paddingTop: '0.6rem', paddingRight: '0.5rem',
                         }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>TOTAL</span>
-                            <span style={{ color: 'var(--primary)' }}>{fmt(sale.total_amount)}</span>
+                            {sale.discount > 0 && (
+                                <>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                                        gap: '0.5rem', marginBottom: '0.2rem',
+                                        fontSize: '0.8rem', color: 'var(--text-muted)',
+                                    }}>
+                                        <span>Subtotal</span>
+                                        <span style={{ textDecoration: 'line-through' }}>
+                                            {fmt(Number(sale.total_amount) + Number(sale.discount))}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                                        gap: '0.5rem', marginBottom: '0.35rem',
+                                        fontSize: '0.8rem', color: '#f87171',
+                                    }}>
+                                        <span>
+                                            Desconto{sale.discount_type === 'percent'
+                                                ? ` (${Math.round(sale.discount / (Number(sale.total_amount) + Number(sale.discount)) * 100)}%)`
+                                                : ''}
+                                        </span>
+                                        <span>− {fmt(sale.discount)}</span>
+                                    </div>
+                                </>
+                            )}
+                            <div style={{
+                                display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                                gap: '0.5rem', fontSize: '1rem', fontWeight: 800, fontFamily: 'Outfit',
+                            }}>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>TOTAL</span>
+                                <span style={{ color: sale.discount > 0 ? '#34d399' : 'var(--primary)' }}>
+                                    {fmt(sale.total_amount)}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 ) : (

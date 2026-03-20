@@ -13,6 +13,8 @@ export default function SaleForm({ onSave, onCancel, user }) {
         tracking_code: '',
         notes: '',
         selected_items: [],
+        discount_type: 'value',
+        discount_value: '',
     })
 
     const [customerSearch, setCustomerSearch] = useState('')
@@ -75,7 +77,11 @@ export default function SaleForm({ onSave, onCancel, user }) {
         }))
     }
 
-    const total = formData.selected_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const subtotal = formData.selected_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const discountAmount = formData.discount_type === 'percent'
+        ? subtotal * (parseFloat(formData.discount_value) || 0) / 100
+        : parseFloat(formData.discount_value) || 0
+    const total = Math.max(0, subtotal - discountAmount)
     const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
     const handleSubmit = async (e) => {
@@ -97,6 +103,8 @@ export default function SaleForm({ onSave, onCancel, user }) {
                     notes: formData.notes || null,
                     items: formData.selected_items,
                     user_id: user?.id || null,
+                    discount: discountAmount,
+                    discount_type: formData.discount_type,
                 }])
                 .select()
             if (error) throw error
@@ -239,6 +247,88 @@ export default function SaleForm({ onSave, onCancel, user }) {
                     </div>
                 )}
 
+                {/* Desconto */}
+                {formData.selected_items.length > 0 && (
+                    <div className="input-group">
+                        <label>Desconto (Opcional)</label>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+                            {/* Tipo */}
+                            <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(p => ({ ...p, discount_type: 'value', discount_value: '' }))}
+                                    style={{
+                                        padding: '0.5rem 0.85rem',
+                                        fontSize: '0.85rem', fontWeight: 700,
+                                        border: 'none', cursor: 'pointer',
+                                        background: formData.discount_type === 'value'
+                                            ? 'linear-gradient(135deg, var(--primary), var(--secondary))'
+                                            : 'rgba(255,255,255,0.04)',
+                                        color: formData.discount_type === 'value' ? 'white' : 'var(--text-muted)',
+                                        transition: 'all 0.2s',
+                                    }}
+                                >R$</button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(p => ({ ...p, discount_type: 'percent', discount_value: '' }))}
+                                    style={{
+                                        padding: '0.5rem 0.85rem',
+                                        fontSize: '0.85rem', fontWeight: 700,
+                                        border: 'none', borderLeft: '1px solid var(--glass-border)', cursor: 'pointer',
+                                        background: formData.discount_type === 'percent'
+                                            ? 'linear-gradient(135deg, var(--primary), var(--secondary))'
+                                            : 'rgba(255,255,255,0.04)',
+                                        color: formData.discount_type === 'percent' ? 'white' : 'var(--text-muted)',
+                                        transition: 'all 0.2s',
+                                    }}
+                                >%</button>
+                            </div>
+                            {/* Valor */}
+                            <input
+                                type="number"
+                                min="0"
+                                step={formData.discount_type === 'percent' ? '1' : '0.01'}
+                                max={formData.discount_type === 'percent' ? '100' : undefined}
+                                value={formData.discount_value}
+                                onChange={e => setFormData(p => ({ ...p, discount_value: e.target.value }))}
+                                placeholder={formData.discount_type === 'percent' ? 'Ex: 10 (%)' : 'Ex: 20,00 (R$)'}
+                                style={{ flex: 1 }}
+                            />
+                        </div>
+
+                        {/* Resumo do desconto */}
+                        {discountAmount > 0 && (
+                            <div style={{
+                                marginTop: '0.6rem',
+                                padding: '0.75rem 1rem',
+                                background: 'rgba(16,185,129,0.06)',
+                                border: '1px solid rgba(16,185,129,0.2)',
+                                borderRadius: '8px',
+                                fontSize: '0.82rem',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                                    <span>Subtotal</span>
+                                    <span style={{ textDecoration: 'line-through' }}>{fmt(subtotal)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f87171', marginBottom: '0.3rem' }}>
+                                    <span>
+                                        Desconto{formData.discount_type === 'percent' ? ` (${formData.discount_value}%)` : ''}
+                                    </span>
+                                    <span>− {fmt(discountAmount)}</span>
+                                </div>
+                                <div style={{
+                                    display: 'flex', justifyContent: 'space-between',
+                                    fontWeight: 800, fontSize: '0.95rem', fontFamily: 'Outfit',
+                                    color: '#34d399', borderTop: '1px solid rgba(16,185,129,0.15)', paddingTop: '0.3rem',
+                                }}>
+                                    <span>Total Final</span>
+                                    <span>{fmt(total)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Status */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="input-group">
@@ -290,7 +380,7 @@ export default function SaleForm({ onSave, onCancel, user }) {
                         {loading ? (
                             <><span className="spinner" style={{ width: '14px', height: '14px' }} /> Processando...</>
                         ) : (
-                            `Finalizar Venda${total > 0 ? ` • ${fmt(total)}` : ''}`
+                            `Finalizar Venda${total > 0 ? ` • ${fmt(total)}` : ''}${discountAmount > 0 ? ` 🏷️ -${fmt(discountAmount)}` : ''}`
                         )}
                     </button>
                     <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>
