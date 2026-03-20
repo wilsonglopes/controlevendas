@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import './Dashboard.css'
 
-export default function Dashboard({ stats }) {
+export default function Dashboard({ stats, user }) {
     const [pendingSales, setPendingSales] = useState([])
     const [toShipList, setToShipList] = useState([])
     const [lowStockProds, setLowStockProds] = useState([])
@@ -80,13 +80,16 @@ export default function Dashboard({ stats }) {
 
     const now = new Date()
     const greeting = now.getHours() < 12 ? 'Bom dia' : now.getHours() < 18 ? 'Boa tarde' : 'Boa noite'
+    const displayName = user?.user_metadata?.full_name?.split(' ')[0]
+        || user?.email?.split('@')[0]
+        || 'usuário'
 
     return (
         <div className="dashboard-fade">
             {/* Header */}
             <header style={{ marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', marginBottom: '0.3rem' }}>
-                    {greeting}, Wilson 👋
+                    {greeting}, {displayName} 👋
                 </h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
                     Aqui está o resumo da sua operação.

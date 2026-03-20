@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
-export default function SaleForm({ onSave, onCancel }) {
+export default function SaleForm({ onSave, onCancel, user }) {
     const [loading, setLoading] = useState(false)
     const [customers, setCustomers] = useState([])
     const [products, setProducts] = useState([])
@@ -96,6 +96,7 @@ export default function SaleForm({ onSave, onCancel }) {
                     tracking_code: formData.tracking_code || null,
                     notes: formData.notes || null,
                     items: formData.selected_items,
+                    user_id: user?.id || null,
                 }])
                 .select()
             if (error) throw error
