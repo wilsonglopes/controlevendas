@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
 export default function SaleForm({ onSave, onCancel }) {
@@ -11,7 +12,7 @@ export default function SaleForm({ onSave, onCancel }) {
         delivery_status: 'Pendente',
         tracking_code: '',
         notes: '',
-        selected_items: []
+        selected_items: [],
     })
 
     const [customerSearch, setCustomerSearch] = useState('')
@@ -19,15 +20,17 @@ export default function SaleForm({ onSave, onCancel }) {
 
     useEffect(() => {
         const loadData = async () => {
-            const { data: custs } = await supabase.from('crm_customers').select('id, name').order('name')
-            const { data: prods } = await supabase.from('crm_products').select('id, name, price, stock').order('name')
+            const [{ data: custs }, { data: prods }] = await Promise.all([
+                supabase.from('crm_customers').select('id, name').order('name'),
+                supabase.from('crm_products').select('id, name, price, stock').order('name'),
+            ])
             setCustomers(custs || [])
             setProducts(prods || [])
         }
         loadData()
     }, [])
 
-    const filteredCustomers = customers.filter(c => 
+    const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(customerSearch.toLowerCase())
     )
 
@@ -41,7 +44,7 @@ export default function SaleForm({ onSave, onCancel }) {
         if (!productId) return
         const product = products.find(p => p.id === productId)
         if (!product) return
-        // Se já existe, aumenta a quantidade
+
         const existing = formData.selected_items.findIndex(i => i.product_id === product.id)
         if (existing >= 0) {
             const updated = [...formData.selected_items]
@@ -50,7 +53,10 @@ export default function SaleForm({ onSave, onCancel }) {
         } else {
             setFormData(prev => ({
                 ...prev,
-                selected_items: [...prev.selected_items, { product_id: product.id, name: product.name, price: product.price, quantity: 1 }]
+                selected_items: [
+                    ...prev.selected_items,
+                    { product_id: product.id, name: product.name, price: product.price, quantity: 1 },
+                ],
             }))
         }
     }
@@ -65,7 +71,7 @@ export default function SaleForm({ onSave, onCancel }) {
     const removeItem = (idx) => {
         setFormData(prev => ({
             ...prev,
-            selected_items: prev.selected_items.filter((_, i) => i !== idx)
+            selected_items: prev.selected_items.filter((_, i) => i !== idx),
         }))
     }
 
@@ -74,7 +80,10 @@ export default function SaleForm({ onSave, onCancel }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        if (formData.selected_items.length === 0) return alert('Adicione pelo menos um produto.')
+        if (formData.selected_items.length === 0) {
+            toast.error('Adicione pelo menos um produto à venda.')
+            return
+        }
         setLoading(true)
         try {
             const { data, error } = await supabase
@@ -86,12 +95,12 @@ export default function SaleForm({ onSave, onCancel }) {
                     delivery_status: formData.delivery_status,
                     tracking_code: formData.tracking_code || null,
                     notes: formData.notes || null,
-                    items: formData.selected_items
+                    items: formData.selected_items,
                 }])
                 .select()
             if (error) throw error
 
-            // Decrementa o estoque de cada produto vendido
+            // Decrementa estoque
             const productIds = [...new Set(formData.selected_items.map(i => i.product_id))]
             const { data: currentProducts } = await supabase
                 .from('crm_products')
@@ -112,10 +121,11 @@ export default function SaleForm({ onSave, onCancel }) {
                 )
             }
 
+            toast.success('Venda registrada com sucesso!')
             onSave(data[0])
-        } catch (error) {
-            console.error('Error saving sale:', error)
-            alert('Erro ao registrar venda.')
+        } catch (err) {
+            console.error('Error saving sale:', err)
+            toast.error('Erro ao registrar venda. Tente novamente.')
         } finally {
             setLoading(false)
         }
@@ -125,11 +135,12 @@ export default function SaleForm({ onSave, onCancel }) {
         <div className="glass-card fade-in" style={{ maxWidth: '700px', margin: '0 auto' }}>
             <h2 style={{ marginBottom: '1.5rem' }}>Nova Venda</h2>
             <form onSubmit={handleSubmit}>
+                {/* Cliente */}
                 <div className="input-group" style={{ position: 'relative' }}>
                     <label>Cliente (opcional)</label>
-                    <input 
-                        type="text" 
-                        placeholder="Pesquisar cliente..." 
+                    <input
+                        type="text"
+                        placeholder="Pesquisar cliente..."
                         value={customerSearch}
                         onFocus={() => setShowCustomerDropdown(true)}
                         onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
@@ -140,26 +151,19 @@ export default function SaleForm({ onSave, onCancel }) {
                         }}
                     />
                     {showCustomerDropdown && filteredCustomers.length > 0 && (
-                        <div className="dropdown-list" style={{ 
-                            position: 'absolute', 
-                            top: '100%', 
-                            left: 0, 
-                            right: 0, 
-                            maxHeight: '200px', 
+                        <div className="dropdown-list" style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            maxHeight: '200px',
                             overflowY: 'auto',
                             marginTop: '0.25rem',
-                            padding: '0.5rem 0'
                         }}>
                             {filteredCustomers.map(c => (
-                                <div 
-                                    key={c.id} 
+                                <div
+                                    key={c.id}
                                     onClick={() => selectCustomer(c)}
-                                    style={{ 
-                                        padding: '0.75rem 1rem', 
-                                        cursor: 'pointer',
-                                        transition: 'background 0.2s',
-                                        borderBottom: '1px solid var(--glass-border)'
-                                    }}
                                     className="dropdown-item"
                                 >
                                     {c.name}
@@ -169,10 +173,11 @@ export default function SaleForm({ onSave, onCancel }) {
                     )}
                 </div>
 
+                {/* Adicionar Produto */}
                 <div className="input-group">
                     <label>Adicionar Produto</label>
-                    <select onChange={e => { addItem(e.target.value); e.target.value = ''; }}>
-                        <option value="">Clique para adicionar um produto...</option>
+                    <select onChange={e => { addItem(e.target.value); e.target.value = '' }}>
+                        <option value="">Selecione um produto para adicionar...</option>
                         {products.map(p => (
                             <option key={p.id} value={p.id}>
                                 {p.name} — {fmt(p.price)} {p.stock > 0 ? `(estoque: ${p.stock})` : '(sem estoque)'}
@@ -181,29 +186,59 @@ export default function SaleForm({ onSave, onCancel }) {
                     </select>
                 </div>
 
+                {/* Itens Selecionados */}
                 {formData.selected_items.length > 0 && (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Itens da Venda</label>
-                        <div className="glass-panel" style={{ padding: '0.75rem' }}>
+                    <div style={{ marginBottom: '1.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'block', marginBottom: '0.35rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Itens da Venda
+                        </label>
+                        <div className="glass-panel" style={{ padding: '0.5rem' }}>
                             {formData.selected_items.map((item, idx) => (
-                                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.25rem', borderBottom: '1px solid var(--glass-border)' }}>
-                                    <span style={{ flex: 1, fontSize: '0.9rem' }}>{item.name}</span>
+                                <div key={idx} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '0.6rem 0.5rem',
+                                    borderBottom: idx < formData.selected_items.length - 1 ? '1px solid var(--glass-border)' : 'none',
+                                }}>
+                                    <span style={{ flex: 1, fontSize: '0.875rem', marginRight: '1rem' }}>{item.name}</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <button type="button" onClick={() => updateQty(idx, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>−</button>
-                                        <span style={{ width: '28px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</span>
-                                        <button type="button" onClick={() => updateQty(idx, item.quantity + 1)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>+</button>
-                                        <span style={{ width: '90px', textAlign: 'right', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{fmt(item.price * item.quantity)}</span>
-                                        <button type="button" onClick={() => removeItem(idx)} style={{ background: 'transparent', border: 'none', color: 'var(--status-debt)', cursor: 'pointer', fontSize: '1rem', marginLeft: '0.25rem' }}>✕</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => updateQty(idx, item.quantity - 1)}
+                                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', width: '26px', height: '26px', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                            −
+                                        </button>
+                                        <span style={{ width: '28px', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem' }}>{item.quantity}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => updateQty(idx, item.quantity + 1)}
+                                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', width: '26px', height: '26px', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                            +
+                                        </button>
+                                        <span style={{ width: '90px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-light)' }}>
+                                            {fmt(item.price * item.quantity)}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeItem(idx)}
+                                            style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', padding: '0 0.25rem' }}
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
                                 </div>
                             ))}
-                            <div style={{ paddingTop: '0.75rem', textAlign: 'right', fontWeight: 700, fontSize: '1.1rem' }}>
-                                Total: {fmt(total)}
+                            <div style={{ paddingTop: '0.75rem', paddingRight: '0.5rem', textAlign: 'right', fontWeight: 700, fontSize: '1.1rem', fontFamily: 'Outfit' }}>
+                                Total: <span style={{ color: 'var(--primary)' }}>{fmt(total)}</span>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Status */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="input-group">
                         <label>Status de Pagamento</label>
@@ -245,8 +280,17 @@ export default function SaleForm({ onSave, onCancel }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                    <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={loading || formData.selected_items.length === 0}>
-                        {loading ? 'Processando...' : `Finalizar Venda${total > 0 ? ` • ${fmt(total)}` : ''}`}
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{ flex: 2 }}
+                        disabled={loading || formData.selected_items.length === 0}
+                    >
+                        {loading ? (
+                            <><span className="spinner" style={{ width: '14px', height: '14px' }} /> Processando...</>
+                        ) : (
+                            `Finalizar Venda${total > 0 ? ` • ${fmt(total)}` : ''}`
+                        )}
                     </button>
                     <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>
                         Cancelar
