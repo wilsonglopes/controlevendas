@@ -1,10 +1,5 @@
 import fs from 'fs';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = 'https://sxsrlrxtfdnnagqyuhnh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4c3Jscnh0ZmRubmFncXl1aG5oIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI1NDUzNiwiZXhwIjoyMDg4ODMwNTM2fQ.PfDWhneI1uC59ozTNKUNFrQQFiio5ePDhPoOg_qSMpQ';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+import { supabase } from './scripts-config.mjs'
 
 async function recover() {
     console.log('📖 Carregando prostvita.sql...');
